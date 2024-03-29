@@ -2,6 +2,8 @@ package system.dust.service;
 
 import system.dust.domain.AirInform;
 
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -9,36 +11,77 @@ import java.util.Map;
 /**
  * 2024.03.29
  * Json에서 데이터를 읽어와 경보 발령 기준이 충족하는지 확인하도록 구현 (PM10)
- * */
+ */
 public class AnalyzeService {
+
+    public static String determineAlertLevel(double pm10Average, double pm25Average) {
+        // 높은 수준의 경보를 먼저 확인
+        if (pm25Average >= 150) {   // 150
+            return "초미세먼지 경보";
+        } else if (pm10Average >= 300) { //300
+            return "미세먼지 경보";
+        } else if (pm25Average >= 75) {    //75
+            return "초미세먼지 주의보";
+        } else if (pm10Average >= 150) { // 150
+            return "미세먼지 주의보";
+        } else {
+            return "경보 없음";
+        }
+    }
 
     public void processAlerts(List<AirInform> informs) {
 
         Map<String, Double> sumPM10 = new HashMap<>();  // 측정소와 날짜 조합에 대한 PM10농도 누적합계
+        Map<String, Double> sumPM25 = new HashMap<>();
         Map<String, Integer> count = new HashMap<>();
-        Map<String, Integer> hours = new HashMap<>();   // 측정소와 날짜 조합별 발령 상태 시간 관리
+        Map<String, LocalDateTime> firstAlertTime = new HashMap<>(); // 첫 경보 발령 시간 기록
+        Map<String, String> firstAlertLevel = new HashMap<>();  // 첫 경보 단계 기록
+        Map<String, Double> firstPM10Average = new HashMap<>();
+        Map<String, Double> firstPM25Average = new HashMap<>();
+
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH");
 
         for (AirInform i : informs) {
             // 측정소 이름과 측정 날짜를 가져옴 (substring은 연-월-일만 가져오기 위함.)
             String key = i.getPlace() + "_" + i.getDate().substring(0, 10);
 
+            LocalDateTime dateTime = LocalDateTime.parse(i.getDate(), formatter);
+
             double pm10Value = Double.parseDouble(i.getPM10()); // String을 double로 변환, 만약 getPM10()이 이미 double을 반환한다면 이 단계는 생략
+            double pm25Value = Double.parseDouble(i.getPM2_5());
             sumPM10.put(key, sumPM10.getOrDefault(key, 0.0) + pm10Value);
+            sumPM25.put(key, sumPM25.getOrDefault(key, 0.0) + pm25Value);
             count.put(key, count.getOrDefault(key, 0) + 1); // 측정횟수 저장
 
-            double currentAverage = sumPM10.get(key) / count.get(key); // 평균 PM10 농도 계산
+            double pm10Average = sumPM10.get(key) / count.get(key); // 평균 PM10 농도 계산
+            double pm25Average = sumPM25.get(key) / count.get(key);
 
-            if (currentAverage >= 20) {
-                hours.putIfAbsent(key, 0); // 경보 상태가 없으면 초기화
-                int time = hours.getOrDefault(key, 0) + 1;   // 기존 연속된 시간에 1시간 추가
-                hours.put(key, time);
+            String alertLevel = determineAlertLevel(pm10Average, pm25Average);
+            if (!"경보 없음".equals(alertLevel)) {
 
+                firstAlertTime.putIfAbsent(key, dateTime); // 경보 조건이 만족된 첫 시간 기록
+                firstAlertLevel.putIfAbsent(key, alertLevel);
+                firstPM10Average.putIfAbsent(key, pm10Average);
+                firstPM25Average.putIfAbsent(key, pm25Average);
 
-                if (time >= 2) {
-                    String alertTime = i.getDate(); // 경보 발령 시간
-                    System.out.println("경보 발령: " + key + " - 경보 발령 시간: " + alertTime);
+                // 현재 시간과 첫 경보 발령 시간의 차이 계산
+                long hoursBetween = java.time.Duration.between(firstAlertTime.get(key), dateTime).toHours();
+
+                if (hoursBetween >= 2) {  // 2시간 이상의 조건의 만족할 경우
+                    String initialAlertLevel = determineAlertLevel(firstPM10Average.get(key), firstPM25Average.get(key));
+
+                    if (initialAlertLevel.equals(firstAlertLevel.get(key))) {
+                        System.out.println("경보 발령: " + key + ", 경보 단계: " + initialAlertLevel + ", 발령 시간: " + i.getDate() + ", 농도: " + pm10Average);
+                    }
                 }
+            } else {
+                // 현재 경보 상태가 아니면 초기화
+                firstAlertTime.remove(key);
+                firstAlertLevel.remove(key);
+                firstPM10Average.remove(key);
+                firstPM25Average.remove(key);
             }
+
         }
     }
 }

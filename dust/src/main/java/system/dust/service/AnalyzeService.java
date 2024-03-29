@@ -11,6 +11,8 @@ import java.util.Map;
 /**
  * 2024.03.29
  * Json에서 데이터를 읽어와 경보 발령 기준이 충족하는지 확인하도록 구현 (PM10)
+ * 경보 발령 기준 추가 및 미세먼지, 초미세먼지 구분 구현
+ * NullPointException 처리
  */
 public class AnalyzeService {
 
@@ -26,6 +28,19 @@ public class AnalyzeService {
             return "미세먼지 주의보";
         } else {
             return "경보 없음";
+        }
+    }
+
+    // null 또는 변환 불가능한 문자열을 안전하게 double 값으로 변환하는 메소드 (nullpointException 처리)
+    private double parseDoubleSafely(String strValue) {
+        if (strValue == null || strValue.trim().isEmpty()) {
+            return 0.0;
+        }
+        try {
+            return Double.parseDouble(strValue.trim());
+        } catch (NumberFormatException e) {
+            // 변환에 실패한 경우, 기본값으로 0.0을 반환
+            return 0.0;
         }
     }
 

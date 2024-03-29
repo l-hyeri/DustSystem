@@ -62,8 +62,8 @@ public class AnalyzeService {
 
             LocalDateTime dateTime = LocalDateTime.parse(i.getDate(), formatter);
 
-            double pm10Value = Double.parseDouble(i.getPM10()); // String을 double로 변환, 만약 getPM10()이 이미 double을 반환한다면 이 단계는 생략
-            double pm25Value = Double.parseDouble(i.getPM2_5());
+            double pm10Value = parseDoubleSafely(i.getPM10()); // String을 double로 변환, 만약 getPM10()이 이미 double을 반환한다면 이 단계는 생략
+            double pm25Value = parseDoubleSafely(i.getPM2_5());
             sumPM10.put(key, sumPM10.getOrDefault(key, 0.0) + pm10Value);
             sumPM25.put(key, sumPM25.getOrDefault(key, 0.0) + pm25Value);
             count.put(key, count.getOrDefault(key, 0) + 1); // 측정횟수 저장

@@ -5,7 +5,9 @@ import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
 import system.dust.domain.AirInform;
 import system.dust.domain.Alerts;
+import system.dust.domain.Inspection;
 import system.dust.repository.AlertsRepository;
+import system.dust.repository.InspectionRepository;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -14,13 +16,13 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 2024.03.29
+ * [2024.03.29]
  * Json에서 데이터를 읽어와 경보 발령 기준이 충족하는지 확인하도록 구현 (PM10)
  * 경보 발령 기준 추가 및 미세먼지, 초미세먼지 구분 구현
  * NullPointException 처리
- * 
- * 2024.03.30
+ * [2024.03.30]
  * service와 repository 연결
+ * 측정소별 점검 내역 db저장 구현
  */
 
 @Service
@@ -28,6 +30,7 @@ import java.util.Map;
 public class AnalyzeService {
 
     private final AlertsRepository alertsRepository;
+    private final InspectionRepository inspectionRepository;
 
     public static String determineAlertLevel(double pm10Average, double pm25Average) {
         // 높은 수준의 경보를 먼저 확인
@@ -45,12 +48,36 @@ public class AnalyzeService {
     }
 
     // null 또는 변환 불가능한 문자열을 안전하게 double 값으로 변환하는 메소드 (nullpointException 처리)
-    private double parseDoubleSafely(String strValue) {
-        if (strValue == null || strValue.trim().isEmpty()) {
+    @Transactional
+    public double pm10parseDoubleSafely(String pm,String place, String date) {
+        if (pm == null || pm.trim().isEmpty()) {
+            Inspection inspec = new Inspection();
+            inspec.setPlace(place);
+            inspec.setContent("날짜: "+date+" / PM10 측정소 점검이 있던 날입니다.");
+            inspectionRepository.save(inspec);
+
             return 0.0;
         }
         try {
-            return Double.parseDouble(strValue.trim());
+            return Double.parseDouble(pm.trim());
+        } catch (NumberFormatException e) {
+            // 변환에 실패한 경우, 기본값으로 0.0을 반환
+            return 0.0;
+        }
+    }
+
+    @Transactional
+    public double pm25parseDoubleSafely(String pm,String place, String date) {
+        if (pm == null || pm.trim().isEmpty()) {
+            Inspection inspec = new Inspection();
+            inspec.setPlace(place);
+            inspec.setContent("날짜: "+date+" / PM2.5 측정소 점검이 있던 날입니다.");
+            inspectionRepository.save(inspec);
+
+            return 0.0;
+        }
+        try {
+            return Double.parseDouble(pm.trim());
         } catch (NumberFormatException e) {
             // 변환에 실패한 경우, 기본값으로 0.0을 반환
             return 0.0;
@@ -76,8 +103,8 @@ public class AnalyzeService {
 
             LocalDateTime dateTime = LocalDateTime.parse(i.getDate(), formatter);
 
-            double pm10Value = parseDoubleSafely(i.getPM10()); // String을 double로 변환, 만약 getPM10()이 이미 double을 반환한다면 이 단계는 생략
-            double pm25Value = parseDoubleSafely(i.getPM2_5());
+            double pm10Value = pm10parseDoubleSafely(i.getPM10(),i.getPlace(),i.getDate()); // String을 double로 변환, 만약 getPM10()이 이미 double을 반환한다면 이 단계는 생략
+            double pm25Value = pm25parseDoubleSafely(i.getPM2_5(),i.getPlace(),i.getDate());
             sumPM10.put(key, sumPM10.getOrDefault(key, 0.0) + pm10Value);
             sumPM25.put(key, sumPM25.getOrDefault(key, 0.0) + pm25Value);
             count.put(key, count.getOrDefault(key, 0) + 1); // 측정횟수 저장
@@ -100,7 +127,6 @@ public class AnalyzeService {
                     String initialAlertLevel = determineAlertLevel(firstPM10Average.get(key), firstPM25Average.get(key));
 
                     if (initialAlertLevel.equals(firstAlertLevel.get(key))) {
-//                        System.out.println("경보 발령: " + key + ", 경보 단계: " + initialAlertLevel + ", 발령 시간: " + i.getDate() + ", 농도: " + pm10Average);
                         Alerts alerts = new Alerts();
                         alerts.setSteps(initialAlertLevel);
                         alerts.setTime(i.getDate());

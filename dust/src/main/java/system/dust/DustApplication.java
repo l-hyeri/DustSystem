@@ -17,8 +17,8 @@ public class DustApplication {
         JsonFileReader reader = new JsonFileReader();
         List<AirInform> informs = reader.readJsonData("package.json");
 
-        AnalyzeService analyze = new AnalyzeService();
-        analyze.processAlerts(informs);
+//        AnalyzeService analyze = new AnalyzeService();
+//        analyze.processAlerts(informs);
     }
 
 }

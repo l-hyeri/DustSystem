@@ -1,5 +1,6 @@
 package system.dust.service;
 
+import jakarta.transaction.Transactional;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
 import system.dust.domain.AirInform;
@@ -56,6 +57,7 @@ public class AnalyzeService {
         }
     }
 
+    @Transactional
     public void processAlerts(List<AirInform> informs) {
 
         Map<String, Double> sumPM10 = new HashMap<>();  // 측정소와 날짜 조합에 대한 PM10농도 누적합계

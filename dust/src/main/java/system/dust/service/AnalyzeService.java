@@ -49,35 +49,20 @@ public class AnalyzeService {
 
     // null 또는 변환 불가능한 문자열을 안전하게 double 값으로 변환하는 메소드 (nullpointException 처리)
     @Transactional
-    public double pm10parseDoubleSafely(String pm,String place, String date) {
+    public double parseDoubleSafely(String pm, String place, String date, String pmType) {
         if (pm == null) {
+            String content = String.format("날짜: %s / %s 측정소 점검이 있던 날입니다.", date, pmType);
+            System.out.println(content);
             Inspection inspec = new Inspection();
             inspec.setPlace(place);
-            inspec.setContent("날짜: "+date+" / PM10 측정소 점검이 있던 날입니다.");
+            inspec.setContent(content);
+
             inspectionRepository.save(inspec);
 
             return 0.0;
         }
         try {
-            return Double.parseDouble(pm.trim());
-        } catch (NumberFormatException e) {
-            // 변환에 실패한 경우, 기본값으로 0.0을 반환
-            return 0.0;
-        }
-    }
-
-    @Transactional
-    public double pm25parseDoubleSafely(String pm,String place, String date) {
-        if (pm == null) {
-            Inspection inspec = new Inspection();
-            inspec.setPlace(place);
-            inspec.setContent("날짜: "+date+" / PM2.5 측정소 점검이 있던 날입니다.");
-            inspectionRepository.save(inspec);
-
-            return 0.0;
-        }
-        try {
-            return Double.parseDouble(pm.trim());
+            return Double.parseDouble(pm);
         } catch (NumberFormatException e) {
             // 변환에 실패한 경우, 기본값으로 0.0을 반환
             return 0.0;
@@ -100,8 +85,8 @@ public class AnalyzeService {
 
             LocalDateTime dateTime = LocalDateTime.parse(i.getDate(), formatter);
 
-            double pm10Value = pm10parseDoubleSafely(i.getPM10(),i.getPlace(),i.getDate()); // String을 double로 변환, 만약 getPM10()이 이미 double을 반환한다면 이 단계는 생략
-            double pm25Value = pm25parseDoubleSafely(i.getPM2_5(),i.getPlace(),i.getDate());
+            double pm10Value = parseDoubleSafely(i.getPM10(), i.getPlace(), i.getDate(), "PM10");
+            double pm25Value = parseDoubleSafely(i.getPM2_5(), i.getPlace(), i.getDate(), "PM2.5");
             sumPM10.put(key, sumPM10.getOrDefault(key, 0.0) + pm10Value);
             sumPM25.put(key, sumPM25.getOrDefault(key, 0.0) + pm25Value);
             count.put(key, count.getOrDefault(key, 0) + 1); // 측정횟수 저장

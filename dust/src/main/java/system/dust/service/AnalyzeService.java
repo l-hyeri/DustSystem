@@ -50,7 +50,7 @@ public class AnalyzeService {
     // null 또는 변환 불가능한 문자열을 안전하게 double 값으로 변환하는 메소드 (nullpointException 처리)
     @Transactional
     public double pm10parseDoubleSafely(String pm,String place, String date) {
-        if (pm == null || pm.trim().isEmpty()) {
+        if (pm == null) {
             Inspection inspec = new Inspection();
             inspec.setPlace(place);
             inspec.setContent("날짜: "+date+" / PM10 측정소 점검이 있던 날입니다.");
@@ -68,7 +68,7 @@ public class AnalyzeService {
 
     @Transactional
     public double pm25parseDoubleSafely(String pm,String place, String date) {
-        if (pm == null || pm.trim().isEmpty()) {
+        if (pm == null) {
             Inspection inspec = new Inspection();
             inspec.setPlace(place);
             inspec.setContent("날짜: "+date+" / PM2.5 측정소 점검이 있던 날입니다.");
@@ -91,9 +91,6 @@ public class AnalyzeService {
         Map<String, Double> sumPM25 = new HashMap<>();
         Map<String, Integer> count = new HashMap<>();
         Map<String, LocalDateTime> firstAlertTime = new HashMap<>(); // 첫 경보 발령 시간 기록
-        Map<String, String> firstAlertLevel = new HashMap<>();  // 첫 경보 단계 기록
-        Map<String, Double> firstPM10Average = new HashMap<>();
-        Map<String, Double> firstPM25Average = new HashMap<>();
 
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH");
 
@@ -116,30 +113,22 @@ public class AnalyzeService {
             if (!"경보 없음".equals(alertLevel)) {
 
                 firstAlertTime.putIfAbsent(key, dateTime); // 경보 조건이 만족된 첫 시간 기록
-                firstAlertLevel.putIfAbsent(key, alertLevel);
-                firstPM10Average.putIfAbsent(key, pm10Average);
-                firstPM25Average.putIfAbsent(key, pm25Average);
 
                 // 현재 시간과 첫 경보 발령 시간의 차이 계산
                 long hoursBetween = java.time.Duration.between(firstAlertTime.get(key), dateTime).toHours();
 
                 if (hoursBetween >= 2) {  // 2시간 이상의 조건의 만족할 경우
-                    String initialAlertLevel = determineAlertLevel(firstPM10Average.get(key), firstPM25Average.get(key));
 
-                    if (initialAlertLevel.equals(firstAlertLevel.get(key))) {
                         Alerts alerts = new Alerts();
-                        alerts.setSteps(initialAlertLevel);
+                        alerts.setSteps(alertLevel);
                         alerts.setTime(i.getDate());
 
                         alertsRepository.save(alerts);
-                    }
+
                 }
             } else {
                 // 현재 경보 상태가 아니면 초기화
                 firstAlertTime.remove(key);
-                firstAlertLevel.remove(key);
-                firstPM10Average.remove(key);
-                firstPM25Average.remove(key);
             }
 
         }

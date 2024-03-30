@@ -120,6 +120,7 @@ public class AnalyzeService {
                 if (hoursBetween >= 2) {  // 2시간 이상의 조건의 만족할 경우
 
                         Alerts alerts = new Alerts();
+                        alerts.setPlace(i.getPlace());
                         alerts.setSteps(alertLevel);
                         alerts.setTime(i.getDate());
 

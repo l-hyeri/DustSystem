@@ -18,7 +18,9 @@ public class Alerts {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long test_id;   // 수정 필요 : 측정소 (구별)
+    private Long alerts_id;   // 경보 발령 정보 저장된 순서 (id)
+
+    private String place;   // 측정소(구별)
 
     private String steps;   // 경보 단계
 

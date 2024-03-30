@@ -1,6 +1,10 @@
 package system.dust.service;
 
+import lombok.AllArgsConstructor;
+import org.springframework.stereotype.Service;
 import system.dust.domain.AirInform;
+import system.dust.domain.Alerts;
+import system.dust.repository.AlertsRepository;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -13,8 +17,16 @@ import java.util.Map;
  * Json에서 데이터를 읽어와 경보 발령 기준이 충족하는지 확인하도록 구현 (PM10)
  * 경보 발령 기준 추가 및 미세먼지, 초미세먼지 구분 구현
  * NullPointException 처리
+ * 
+ * 2024.03.30
+ * service와 repository 연결
  */
+
+@Service
+@AllArgsConstructor
 public class AnalyzeService {
+
+    private final AlertsRepository alertsRepository;
 
     public static String determineAlertLevel(double pm10Average, double pm25Average) {
         // 높은 수준의 경보를 먼저 확인
@@ -86,7 +98,12 @@ public class AnalyzeService {
                     String initialAlertLevel = determineAlertLevel(firstPM10Average.get(key), firstPM25Average.get(key));
 
                     if (initialAlertLevel.equals(firstAlertLevel.get(key))) {
-                        System.out.println("경보 발령: " + key + ", 경보 단계: " + initialAlertLevel + ", 발령 시간: " + i.getDate() + ", 농도: " + pm10Average);
+//                        System.out.println("경보 발령: " + key + ", 경보 단계: " + initialAlertLevel + ", 발령 시간: " + i.getDate() + ", 농도: " + pm10Average);
+                        Alerts alerts = new Alerts();
+                        alerts.setSteps(initialAlertLevel);
+                        alerts.setTime(i.getDate());
+
+                        alertsRepository.save(alerts);
                     }
                 }
             } else {

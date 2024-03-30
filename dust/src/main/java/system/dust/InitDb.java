@@ -23,10 +23,10 @@ public class InitDb {
     @PostConstruct
     public void init() {
         List<MeasurementData> measurementDataList = Arrays.asList(
-                new MeasurementData(1, "PM-2.5 경보"),
-                new MeasurementData(2, "PM-10 경보"),
-                new MeasurementData(3, "PM-2.5 주의보"),
-                new MeasurementData(4, "PM-10 주의보")
+                new MeasurementData(1, "초미세먼지 경보"),
+                new MeasurementData(2, "미세먼지 경보"),
+                new MeasurementData(3, "초미세먼지 주의보"),
+                new MeasurementData(4, "미세먼지 주의보")
         );
         measurementDataList.forEach(data -> initService.dbInit(data.grade, data.steps));
     }

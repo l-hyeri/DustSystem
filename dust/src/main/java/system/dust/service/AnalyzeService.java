@@ -25,6 +25,8 @@ import java.util.Map;
  * 메소드 분리 (유지보수 고려)
  * 측정소 점검 내역 저장 코드 Service로 분리 (단일 책임 원칙 고려)
  * 경보 단계 지정 코드 Service로 분리 (단일 책임 원칙 고려)
+ * [2024.04.01]
+ * 웹훅 구현
  */
 
 @Service
@@ -34,6 +36,7 @@ public class AnalyzeService {
     private final AlertsRepository alertsRepository;
     private final InspectionService inspectionService;
     private final AlertLevelDetermineService aldService;
+    private final WebHookService webHookService;
 
     @Transactional
     public void processAlerts(List<AirInform> informs) {
@@ -91,5 +94,6 @@ public class AnalyzeService {
         alerts.setTime(alertTime);
 
         alertsRepository.save(alerts);
+        webHookService.sendWebHook(alertLevel);
     }
 }

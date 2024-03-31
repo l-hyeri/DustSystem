@@ -23,6 +23,8 @@ import java.util.Map;
  * [2024.03.30]
  * service와 repository 연결
  * 측정소별 점검 내역 db저장 구현
+ * [2024.03.31]
+ * 메소드 분리 (유지보수 고려)
  */
 
 @Service
@@ -52,7 +54,6 @@ public class AnalyzeService {
     public double parseDoubleSafely(String pm, String place, String date, String pmType) {
         if (pm == null) {
             String content = String.format("날짜: %s / %s 측정소 점검이 있던 날입니다.", date, pmType);
-            System.out.println(content);
             Inspection inspec = new Inspection();
             inspec.setPlace(place);
             inspec.setContent(content);
@@ -82,41 +83,48 @@ public class AnalyzeService {
         for (AirInform i : informs) {
             // 측정소 이름과 측정 날짜를 가져옴 (substring은 연-월-일만 가져오기 위함.)
             String key = i.getPlace() + "_" + i.getDate().substring(0, 10);
-
             LocalDateTime dateTime = LocalDateTime.parse(i.getDate(), formatter);
 
             double pm10Value = parseDoubleSafely(i.getPM10(), i.getPlace(), i.getDate(), "PM10");
             double pm25Value = parseDoubleSafely(i.getPM2_5(), i.getPlace(), i.getDate(), "PM2.5");
-            sumPM10.put(key, sumPM10.getOrDefault(key, 0.0) + pm10Value);
-            sumPM25.put(key, sumPM25.getOrDefault(key, 0.0) + pm25Value);
-            count.put(key, count.getOrDefault(key, 0) + 1); // 측정횟수 저장
+
+            sumPM10.merge(key, pm10Value, Double::sum);
+            sumPM25.merge(key, pm25Value, Double::sum);
+            count.merge(key, 1, Integer::sum);  // 측정횟수 저장
 
             double pm10Average = sumPM10.get(key) / count.get(key); // 평균 PM10 농도 계산
             double pm25Average = sumPM25.get(key) / count.get(key);
 
             String alertLevel = determineAlertLevel(pm10Average, pm25Average);
-            if (!"경보 없음".equals(alertLevel)) {
-
-                firstAlertTime.putIfAbsent(key, dateTime); // 경보 조건이 만족된 첫 시간 기록
-
-                // 현재 시간과 첫 경보 발령 시간의 차이 계산
-                long hoursBetween = java.time.Duration.between(firstAlertTime.get(key), dateTime).toHours();
-
-                if (hoursBetween >= 2) {  // 2시간 이상의 조건의 만족할 경우
-
-                        Alerts alerts = new Alerts();
-                        alerts.setPlace(i.getPlace());
-                        alerts.setSteps(alertLevel);
-                        alerts.setTime(i.getDate());
-
-                        alertsRepository.save(alerts);
-
-                }
-            } else {
-                // 현재 경보 상태가 아니면 초기화
-                firstAlertTime.remove(key);
-            }
+            checkAlerts(key, dateTime, firstAlertTime, alertLevel, i.getPlace(), i.getDate());
 
         }
+    }
+
+    private void checkAlerts(String key, LocalDateTime dateTime,
+                              Map<String, LocalDateTime> firstAlertTime,
+                              String alertLevel, String place, String date) {   // 경보 알림 조건 확인 메서드
+        if (!"경보 없음".equals(alertLevel)) {
+            firstAlertTime.putIfAbsent(key, dateTime); // 경보 조건이 만족된 첫 시간 기록
+
+            // 현재 시간과 첫 경보 발령 시간의 차이 계산
+            long hoursBetween = java.time.Duration.between(firstAlertTime.get(key), dateTime).toHours();
+
+            if (hoursBetween >= 2) {  // 2시간 이상의 조건의 만족할 경우
+                saveAlert(place, alertLevel, date);
+            }
+        } else {
+            // 현재 경보 상태가 아니면 초기화
+            firstAlertTime.remove(key);
+        }
+    }
+
+    private void saveAlert(String place, String alertLevel, String alertTime) { // 경보 알림 발생 시 DB저장 메서드
+        Alerts alerts = new Alerts();
+        alerts.setPlace(place);
+        alerts.setSteps(alertLevel);
+        alerts.setTime(alertTime);
+
+        alertsRepository.save(alerts);
     }
 }

@@ -23,7 +23,8 @@ import java.util.Map;
  * 측정소별 점검 내역 db저장 구현
  * [2024.03.31]
  * 메소드 분리 (유지보수 고려)
- * 측정소 점검 내역 저장 코드 service로 분리
+ * 측정소 점검 내역 저장 코드 Service로 분리 (단일 책임 원칙 고려)
+ * 경보 단계 지정 코드 Service로 분리 (단일 책임 원칙 고려)
  */
 
 @Service
@@ -32,21 +33,7 @@ public class AnalyzeService {
 
     private final AlertsRepository alertsRepository;
     private final InspectionService inspectionService;
-
-    public static String determineAlertLevel(double pm10Average, double pm25Average) {
-        // 높은 수준의 경보를 먼저 확인
-        if (pm25Average >= 150) {   // 150
-            return "초미세먼지 경보";
-        } else if (pm10Average >= 300) { //300
-            return "미세먼지 경보";
-        } else if (pm25Average >= 75) {    //75
-            return "초미세먼지 주의보";
-        } else if (pm10Average >= 150) { // 150
-            return "미세먼지 주의보";
-        } else {
-            return "경보 없음";
-        }
-    }
+    private final AlertLevelDetermineService aldService;
 
     @Transactional
     public void processAlerts(List<AirInform> informs) {
@@ -73,7 +60,7 @@ public class AnalyzeService {
             double pm10Average = sumPM10.get(key) / count.get(key); // 평균 PM10 농도 계산
             double pm25Average = sumPM25.get(key) / count.get(key);
 
-            String alertLevel = determineAlertLevel(pm10Average, pm25Average);
+            String alertLevel = aldService.determineAlertLevel(pm10Average, pm25Average);
             checkAlerts(key, dateTime, firstAlertTime, alertLevel, i.getPlace(), i.getDate());
 
         }

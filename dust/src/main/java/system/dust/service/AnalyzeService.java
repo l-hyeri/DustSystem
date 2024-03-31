@@ -5,9 +5,7 @@ import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
 import system.dust.domain.AirInform;
 import system.dust.domain.Alerts;
-import system.dust.domain.Inspection;
 import system.dust.repository.AlertsRepository;
-import system.dust.repository.InspectionRepository;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -25,6 +23,7 @@ import java.util.Map;
  * 측정소별 점검 내역 db저장 구현
  * [2024.03.31]
  * 메소드 분리 (유지보수 고려)
+ * 측정소 점검 내역 저장 코드 service로 분리
  */
 
 @Service
@@ -32,7 +31,7 @@ import java.util.Map;
 public class AnalyzeService {
 
     private final AlertsRepository alertsRepository;
-    private final InspectionRepository inspectionRepository;
+    private final InspectionService inspectionService;
 
     public static String determineAlertLevel(double pm10Average, double pm25Average) {
         // 높은 수준의 경보를 먼저 확인
@@ -46,27 +45,6 @@ public class AnalyzeService {
             return "미세먼지 주의보";
         } else {
             return "경보 없음";
-        }
-    }
-
-    // null 또는 변환 불가능한 문자열을 안전하게 double 값으로 변환하는 메소드 (nullpointException 처리)
-    @Transactional
-    public double parseDoubleSafely(String pm, String place, String date, String pmType) {
-        if (pm == null) {
-            String content = String.format("날짜: %s / %s 측정소 점검이 있던 날입니다.", date, pmType);
-            Inspection inspec = new Inspection();
-            inspec.setPlace(place);
-            inspec.setContent(content);
-
-            inspectionRepository.save(inspec);
-
-            return 0.0;
-        }
-        try {
-            return Double.parseDouble(pm);
-        } catch (NumberFormatException e) {
-            // 변환에 실패한 경우, 기본값으로 0.0을 반환
-            return 0.0;
         }
     }
 
@@ -85,8 +63,8 @@ public class AnalyzeService {
             String key = i.getPlace() + "_" + i.getDate().substring(0, 10);
             LocalDateTime dateTime = LocalDateTime.parse(i.getDate(), formatter);
 
-            double pm10Value = parseDoubleSafely(i.getPM10(), i.getPlace(), i.getDate(), "PM10");
-            double pm25Value = parseDoubleSafely(i.getPM2_5(), i.getPlace(), i.getDate(), "PM2.5");
+            double pm10Value = inspectionService.parseDoubleSafely(i.getPM10(), i.getPlace(), i.getDate(), "PM10");
+            double pm25Value = inspectionService.parseDoubleSafely(i.getPM2_5(), i.getPlace(), i.getDate(), "PM2.5");
 
             sumPM10.merge(key, pm10Value, Double::sum);
             sumPM25.merge(key, pm25Value, Double::sum);

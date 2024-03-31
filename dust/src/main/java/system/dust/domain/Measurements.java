@@ -18,4 +18,6 @@ public class Measurements {
     private int grade;  // 등급
 
     private String steps;   // 경보단계
+
+    private String message; // 설명
 }

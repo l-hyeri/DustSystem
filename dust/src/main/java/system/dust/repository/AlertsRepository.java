@@ -6,6 +6,10 @@ import system.dust.domain.Alerts;
 
 import java.util.List;
 
+/**
+ * DB에 경보 발령 기준이 충족된 데이터를 담기 위해 사용하는 repository
+ * */
+
 @Repository
 public interface AlertsRepository extends JpaRepository<Alerts, Long> {
 

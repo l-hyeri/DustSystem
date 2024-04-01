@@ -17,8 +17,6 @@ public class WebHookController {
     @PostMapping("/webhook")
     public ResponseEntity<String> receiveWebHook(@RequestBody Map<String, Object> notification) {   // 수신
 
-        System.out.println("수신 데이터: " + notification);
-
         // 처리 성공 응답 보내기
         return new ResponseEntity<>(notification+ " / 데이터 수신", HttpStatus.OK);
     }

@@ -27,6 +27,7 @@ import java.util.Map;
  * 경보 단계 지정 코드 Service로 분리 (단일 책임 원칙 고려)
  * [2024.04.01]
  * 웹훅 구현
+ * 웹훅 시간순서로 구현
  */
 
 @Service
@@ -67,6 +68,7 @@ public class AnalyzeService {
             checkAlerts(key, dateTime, firstAlertTime, alertLevel, i.getPlace(), i.getDate());
 
         }
+        webHookService.sendWebHook();   // DB에 경보 알림 저장 후 웹훅 실행
     }
 
     private void checkAlerts(String key, LocalDateTime dateTime,
@@ -94,6 +96,5 @@ public class AnalyzeService {
         alerts.setTime(alertTime);
 
         alertsRepository.save(alerts);
-        webHookService.sendWebHook(alertLevel);
     }
 }

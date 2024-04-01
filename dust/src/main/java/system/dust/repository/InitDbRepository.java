@@ -1,19 +1,10 @@
 package system.dust.repository;
 
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.PersistenceContext;
-import lombok.RequiredArgsConstructor;
+import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 import system.dust.domain.Measurements;
 
 @Repository
-@RequiredArgsConstructor
-public class InitDbRepository {
+public interface InitDbRepository extends JpaRepository<Measurements, Long> {
 
-    @PersistenceContext
-    private EntityManager em;
-
-    public void save(Measurements measurements) {
-        em.persist(measurements);
-    }
 }
